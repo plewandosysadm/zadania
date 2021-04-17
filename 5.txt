@@ -1,0 +1,1 @@
+create ltm virtual name-vip-http  { destination 1.2.3.4:http ip-protocol tcp mask 255.255.255.255 pool test_pool  profiles add { nPath-FastL4 { } } translate-address disabled translate-port disabled vlans add 10 vlans-enabled }

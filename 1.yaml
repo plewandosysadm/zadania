@@ -1,0 +1,66 @@
+---
+- hosts: centos-source-file
+
+  tasks:
+  - name: copy from file_src (192.168.1.5) to local
+    fetch:
+      src: /home/ansible.user/test.tar
+      dest: /tmp/
+
+- hosts: file_dst
+  vars:
+    path_dst: /home/ansible.user/test
+
+  tasks:
+  - name: copy from local to file_dst hosts
+    copy:
+      src: /tmp/centos-source-file/home/ansible.user/test.tar
+      dest: /tmp/
+
+  - name: ensure a directory exists
+    file:
+      path: "{{ path_dst }}"
+      state: directory
+
+  - name: ensure user "test.user" exists
+    user:
+      name: test.user
+
+  - name: ensure group "test.group" exists
+    group:
+      name: test.group
+
+  - name: extract test.tar
+    unarchive:
+      src: /tmp/test.tar
+      dest: "{{ path_dst }}"
+      remote_src: yes
+
+  - name: permission to others
+    file:
+      path: "{{ path_dst }}"
+      recurse: yes
+      mode: '0004'
+
+  - name: acl for test.user
+    acl:
+      path: "{{ path_dst }}"
+      entry: u:test.user:rwx
+      recursive: yes
+      state: present
+
+  - name: acl for test.group
+    acl:
+      path: "{{ path_dst }}"
+      entry: g:test.group:rw
+      recursive: yes
+      state: present
+
+- hosts: localhost
+
+  tasks:
+  - name: remove test.tar from ansible_local
+    file:
+      path: /tmp/centos-source-file/
+      state: absent
+

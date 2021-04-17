@@ -1,0 +1,31 @@
+- hosts: localhost
+  tasks:
+  - name: Create a virtual machine on given ESXi hostname
+    vmware_guest:
+      hostname: "{{ vcenter_hostname }}"
+      username: "{{ vcenter_username }}"
+      password: "{{ vcenter_password }}"
+      folder: /vm/test/
+      name: testmachine01
+      state: poweredon
+      guest_id: centos64Guest
+      # This is hostname of particular ESXi server on which user wants VM to be deployed
+      esxi_hostname: "{{ esxi_hostname }}"
+      disk:
+      - size_gb: 100
+        type: thin
+        datastore: datastore13
+      hardware:
+        memory_mb: 16384
+        num_cpus: 4
+        scsi: paravirtual
+      networks:
+      - name: VM Network
+        mac: aa:bb:dd:aa:00:13
+        ip: 10.10.10.113
+        netmask: 255.255.255.0
+        device_type: vmxnet3
+        domain: test_network
+      wait_for_ip_address: yes
+    delegate_to: localhost
+    register: deploy_vm

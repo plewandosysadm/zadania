@@ -1,0 +1,66 @@
+- hosts: all
+  serial: 1
+  tasks:
+    - name: RedHat / Centos update task
+      block:
+      - name: .rpm upgrade server
+        yum: >
+          update_cache=yes
+          name=*
+          state=latest
+          update_cache=yes
+
+      - name: check for reboot hint
+        shell: LAST_KERNEL=$(rpm -q --last kernel | awk 'NR==1{sub(/kernel-/,""); print $1}'); CURRENT_KERNEL=$(uname -r); if [ $LAST_KERNEL != $CURRENT_KERNEL ]; then echo 'reboot'; else echo 'no'; fi
+        ignore_errors: true
+        register: reboot_hint
+
+      - name: restart block
+        block:
+        - name: server restart
+          shell: /sbin/shutdown -r +1
+
+        - name: wait for SSH
+          connection: local
+          wait_for: 
+            port: 22 
+            host: '{{ inventory_hostname }}'
+            state: started
+            delay: 60
+            sleep: 30 
+            connect_timeout: 60
+        when: reboot_hint.stdout.find("reboot") != -1
+        
+      when: ansible_distribution == 'CentOS' or ansible_distribution == 'RedHat'
+
+    - name: Debian / Ubuntu update task
+      block:
+      - name: .deb do dist-upgrade
+        apt: >
+          update_cache=yes
+          cache_valid_time=1200
+          upgrade=dist
+
+      - name: check for reboot hint
+        stat:
+          path: /var/run/reboot-required
+        register: rebootrequiredfile
+
+      - name: restart block
+        block:
+        - name: server restart
+          shell: /sbin/shutdown -r +1
+
+        - name: wait for SSH
+          connection: local
+          wait_for:
+            port: 22
+            host: '{{ inventory_hostname }}'
+            state: started
+            delay: 60
+            sleep: 30
+            connect_timeout: 60
+        when: rebootrequiredfile.stat.exists
+
+      when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
